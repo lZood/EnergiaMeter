@@ -52,7 +52,13 @@ const forecastEnergyFlow = ai.defineFlow(
 
 export async function forecastEnergyCost(readings: EnergyReading[], rate: number): Promise<number> {
   if (readings.length < 5) return 0;
+
+  // Preparamos los datos para que solo contengan los campos relevantes para el prompt.
+  const preparedReadings = readings.map(r => ({
+      created_at: r.created_at,
+      potencia_w: r.potencia_w,
+  }));
   
-  const result = await forecastEnergyFlow({ readings, rate });
+  const result = await forecastEnergyFlow({ readings: preparedReadings, rate });
   return result.forecastedCost;
 }
