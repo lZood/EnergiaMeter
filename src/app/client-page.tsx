@@ -243,17 +243,19 @@ export default function ClientPage() {
               <Sparkles className="h-5 w-5 text-primary" />
               Análisis Energético
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {isAnalyzing ? (
-                <div className="space-y-4 pt-4">
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-4/6" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              ) : (
-                 <div className="whitespace-pre-wrap pt-4 text-sm text-foreground">{analysisResult}</div>
-              )}
+            <AlertDialogDescription asChild>
+              <div>
+                {isAnalyzing ? (
+                  <div className="space-y-4 pt-4">
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-4/6" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap pt-4 text-sm text-foreground">{analysisResult}</div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
