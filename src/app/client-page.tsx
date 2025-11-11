@@ -99,11 +99,11 @@ export default function ClientPage() {
     }
   }, [toast]);
   
-  const getForecast = useCallback(async (data: EnergyReading[], currentRate: number) => {
-    if (data.length < 10) return;
+  const getForecast = useCallback(async () => {
+    if (historicalData.length < 10) return;
     setIsForecasting(true);
     try {
-      const cost = await forecastEnergyCost(data, currentRate);
+      const cost = await forecastEnergyCost(historicalData, rate);
       setForecastedCost(cost);
       setLastForecastUpdate(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
     } catch (error) {
@@ -111,21 +111,16 @@ export default function ClientPage() {
     } finally {
       setIsForecasting(false);
     }
-  }, []);
+  }, [historicalData, rate]);
 
-  const handleNewData = useCallback((newData: EnergyReading[], oldData: EnergyReading[]) => {
+  const handleNewData = useCallback((newData: EnergyReading[]) => {
       setHistoricalData(newData);
       if (newData.length > 0) {
         const latestReading = newData[0];
         setCurrentReading(latestReading);
         setTime(new Date(latestReading.created_at).toLocaleTimeString());
-        
-        // Call AI functions only when new data arrives, not on every tick
-        if (newData.length > oldData.length) {
-            checkForAnomalies(newData);
-        }
       }
-  }, [checkForAnomalies]);
+  }, []);
 
 
   const fetchData = useCallback(async () => {
@@ -145,14 +140,14 @@ export default function ClientPage() {
         description: 'No se pudieron cargar los datos de Supabase.',
       });
     } else if (data) {
-        // Pass the current historicalData to compare against
-        setHistoricalData(prevData => {
-            handleNewData(data, prevData);
-            return data;
-        });
+        const currentDataLength = historicalData.length;
+        handleNewData(data);
+        if (data.length > currentDataLength) {
+            checkForAnomalies(data);
+        }
     }
     if (loading) setLoading(false);
-  }, [isSupabaseConnected, toast, loading, handleNewData]);
+  }, [isSupabaseConnected, toast, loading, handleNewData, checkForAnomalies, historicalData.length]);
 
 
   useEffect(() => {
@@ -182,16 +177,21 @@ export default function ClientPage() {
     }
   }, [isSupabaseConnected, fetchData]);
 
+  // Effect for forecast, runs independently
   useEffect(() => {
-      if (historicalData.length > 0) {
-          getForecast(historicalData, rate); // Get initial forecast
-          const intervalId = setInterval(() => {
-              getForecast(historicalData, rate);
-          }, FORECAST_INTERVAL); // Then update every 24 hours
+    // Only run forecast logic if we have some data
+    if (historicalData.length > 0) {
+        getForecast(); // Get initial forecast when data is first loaded
 
-          return () => clearInterval(intervalId);
-      }
-  }, [historicalData, rate, getForecast]);
+        const intervalId = setInterval(() => {
+            getForecast();
+        }, FORECAST_INTERVAL); // Then update every 24 hours
+
+        return () => clearInterval(intervalId); // Cleanup on unmount
+    }
+    // The dependency array ensures this effect only re-runs if getForecast function identity changes,
+    // or when historicalData transitions from empty to populated.
+  }, [historicalData.length > 0, getForecast]);
 
 
   useEffect(() => {
