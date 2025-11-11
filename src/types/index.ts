@@ -7,3 +7,12 @@ export type EnergyReading = {
   temperatura: number; // in Celsius
   humedad: number; // in %
 };
+
+export type Device = {
+  id: string;
+  name: string;
+  location: string;
+  icon: 'lightbulb' | 'fridge' | 'tv' | 'fan' | 'ac' | 'other';
+  consumption: number; // Consumo promedio en Watts
+  status: 'on' | 'off';
+};
