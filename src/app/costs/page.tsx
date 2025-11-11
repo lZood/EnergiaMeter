@@ -35,6 +35,7 @@ export default function CostsPage() {
   
   const [forecastedCost, setForecastedCost] = useState<number>(0);
   const [isForecasting, setIsForecasting] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const currentMonthData = useMemo(() => {
     const now = new Date();
@@ -60,6 +61,7 @@ export default function CostsPage() {
         rate: rate,
       });
       setForecastedCost(result);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error("Error al obtener el pronóstico:", error);
       toast({
@@ -108,13 +110,6 @@ export default function CostsPage() {
 
     fetchData();
   }, [toast]);
-
-  useEffect(() => {
-    if (currentMonthData.length > 0) {
-      getForecast();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMonthData]);
   
 
   if (loading) {
@@ -137,7 +132,9 @@ export default function CostsPage() {
           <CostCard historicalData={currentMonthData} rate={rate} onRateChange={setRate} />
           <ForecastCard 
             cost={forecastedCost} 
-            isLoading={isForecasting} 
+            isLoading={isForecasting}
+            lastUpdated={lastUpdated}
+            onGetForecast={getForecast}
           />
         </div>
       </main>
