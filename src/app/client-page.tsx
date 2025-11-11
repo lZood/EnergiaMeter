@@ -7,6 +7,8 @@ import { Zap, TrendingUp, Droplets, Thermometer, Gauge, Sparkles } from 'lucide-
 import { DashboardHeader } from '@/components/dashboard/header';
 import { EnergyCard } from '@/components/dashboard/energy-card';
 import { HistoryChart } from '@/components/dashboard/history-chart';
+import { TemperatureChart } from '@/components/dashboard/temperature-chart';
+import { HumidityChart } from '@/components/dashboard/humidity-chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -160,6 +162,8 @@ export default function ClientPage() {
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="col-span-2 lg:col-span-4 h-80" />
+          <Skeleton className="col-span-2 lg:col-span-4 h-80" />
+          <Skeleton className="col-span-2 lg:col-span-4 h-80" />
         </div>
       </div>
     );
@@ -212,6 +216,12 @@ export default function ClientPage() {
           
           <div className="col-span-2 lg:col-span-4">
             <HistoryChart data={historicalData} />
+          </div>
+          <div className="col-span-2 lg:col-span-4">
+            <TemperatureChart data={historicalData} />
+          </div>
+          <div className="col-span-2 lg:col-span-4">
+            <HumidityChart data={historicalData} />
           </div>
         </div>
       </main>
