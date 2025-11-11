@@ -21,7 +21,7 @@ const ForecastInputSchema = z.object({
 const prompt = ai.definePrompt({
   name: 'energyForecasterPrompt',
   input: { schema: ForecastInputSchema },
-  output: { format: 'json' },
+  output: { schema: z.object({ forecastedCost: z.number() }) },
   prompt: `Eres un analista de datos especializado en consumo energético. Te proporcionaré una serie de lecturas de potencia (en vatios) de un período de tiempo parcial dentro de un mes.
 
 Tu tarea es:
@@ -31,7 +31,7 @@ Tu tarea es:
 
 Devuelve únicamente un objeto JSON con la clave "forecastedCost", que contenga el valor numérico del costo total mensual estimado. No incluyas unidades ni texto adicional.
 
-Datos de consumo: {{{jsonStringify readings}}}
+Datos de consumo: {{{JSON.stringify readings}}}
 Tarifa: {{{rate}}} $/kWh
 `,
 });
@@ -55,7 +55,6 @@ const forecastEnergyFlow = ai.defineFlow(
       throw new Error("La IA no generó una respuesta.");
     }
     
-    // Asumimos que la IA devuelve un JSON como { "forecastedCost": 123.45 }
     return output.forecastedCost;
   }
 );
