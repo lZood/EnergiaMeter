@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { EnergyReading } from '@/types';
-import { Zap, Clock, TrendingUp, Droplets, Thermometer, Gauge, Sparkles } from 'lucide-react';
+import { Zap, TrendingUp, Droplets, Thermometer, Gauge, Sparkles } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard/header';
 import { EnergyCard } from '@/components/dashboard/energy-card';
 import { HistoryChart } from '@/components/dashboard/history-chart';
@@ -113,19 +113,19 @@ export default function ClientPage() {
     }
   }, []);
 
-  const handleNewData = useCallback((data: EnergyReading[]) => {
-      setHistoricalData(data);
-      if (data.length > 0) {
-        const latestReading = data[0];
+  const handleNewData = useCallback((newData: EnergyReading[], oldData: EnergyReading[]) => {
+      setHistoricalData(newData);
+      if (newData.length > 0) {
+        const latestReading = newData[0];
         setCurrentReading(latestReading);
         setTime(new Date(latestReading.created_at).toLocaleTimeString());
         
         // Call AI functions only when new data arrives, not on every tick
-        if (data.length > historicalData.length) {
-            checkForAnomalies(data);
+        if (newData.length > oldData.length) {
+            checkForAnomalies(newData);
         }
       }
-  }, [checkForAnomalies, historicalData.length]);
+  }, [checkForAnomalies]);
 
 
   const fetchData = useCallback(async () => {
@@ -145,7 +145,11 @@ export default function ClientPage() {
         description: 'No se pudieron cargar los datos de Supabase.',
       });
     } else if (data) {
-        handleNewData(data);
+        // Pass the current historicalData to compare against
+        setHistoricalData(prevData => {
+            handleNewData(data, prevData);
+            return data;
+        });
     }
     if (loading) setLoading(false);
   }, [isSupabaseConnected, toast, loading, handleNewData]);
@@ -163,15 +167,14 @@ export default function ClientPage() {
             description: 'Por favor, configura tus credenciales de Supabase. Usando datos de prueba.',
             duration: 9000,
         });
-        
-        handleNewData(MOCK_HISTORICAL_DATA);
+        setHistoricalData(MOCK_HISTORICAL_DATA);
         setLoading(false);
         return;
     }
     
     setIsSupabaseConnected(true);
     setLoading(true);
-  }, [toast, handleNewData]);
+  }, [toast]);
   
   useEffect(() => {
     if (isSupabaseConnected) {
@@ -303,3 +306,5 @@ export default function ClientPage() {
     </div>
   );
 }
+
+    
