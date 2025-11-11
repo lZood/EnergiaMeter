@@ -7,9 +7,10 @@ import { TrendingUp } from 'lucide-react';
 interface ForecastCardProps {
   cost: number;
   isLoading: boolean;
+  lastUpdated: string | null;
 }
 
-export function ForecastCard({ cost, isLoading }: ForecastCardProps) {
+export function ForecastCard({ cost, isLoading, lastUpdated }: ForecastCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -28,7 +29,7 @@ export function ForecastCard({ cost, isLoading }: ForecastCardProps) {
               ${cost.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Costo estimado para un período de 30 días.
+              {lastUpdated ? `Actualizado a las ${lastUpdated}` : 'Costo estimado para 30 días.'}
             </p>
           </>
         )}

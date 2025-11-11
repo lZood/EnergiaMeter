@@ -39,6 +39,7 @@ const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
 );
 
 const REFRESH_INTERVAL = 8000; // 8 seconds
+const FORECAST_INTERVAL = 3600000; // 1 hour
 
 export default function ClientPage() {
   const [currentReading, setCurrentReading] = useState<EnergyReading | null>(
@@ -50,7 +51,7 @@ export default function ClientPage() {
   const { toast } = useToast();
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
   const [time, setTime] = useState('N/A');
-  const [rate, setRate] = useState<number>(0.15);
+  const [rate, setRate] = useState<number>(0.803);
 
   const [isAnalysisDialogOpen, setAnalysisDialogOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState('');
@@ -58,6 +59,8 @@ export default function ClientPage() {
   
   const [forecastedCost, setForecastedCost] = useState<number>(0);
   const [isForecasting, setIsForecasting] = useState(false);
+  const [lastForecastUpdate, setLastForecastUpdate] = useState<string | null>(null);
+
 
   const handleAnalysis = async () => {
     if (!historicalData || historicalData.length < 5) {
@@ -102,6 +105,7 @@ export default function ClientPage() {
     try {
       const cost = await forecastEnergyCost(data, currentRate);
       setForecastedCost(cost);
+      setLastForecastUpdate(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
     } catch (error) {
       console.error("Error al obtener el pronóstico:", error);
     } finally {
@@ -119,10 +123,9 @@ export default function ClientPage() {
         // Call AI functions only when new data arrives, not on every tick
         if (data.length > historicalData.length) {
             checkForAnomalies(data);
-            getForecast(data, rate);
         }
       }
-  }, [checkForAnomalies, getForecast, rate, historicalData.length]);
+  }, [checkForAnomalies, historicalData.length]);
 
 
   const fetchData = useCallback(async () => {
@@ -162,20 +165,30 @@ export default function ClientPage() {
         });
         
         handleNewData(MOCK_HISTORICAL_DATA);
-        getForecast(MOCK_HISTORICAL_DATA, rate);
         setLoading(false);
         return;
     }
     
     setIsSupabaseConnected(true);
     setLoading(true);
-  }, [toast, handleNewData, getForecast, rate]);
+  }, [toast, handleNewData]);
   
   useEffect(() => {
     if (isSupabaseConnected) {
       fetchData();
     }
   }, [isSupabaseConnected, fetchData]);
+
+  useEffect(() => {
+      if (historicalData.length > 0) {
+          getForecast(historicalData, rate); // Get initial forecast
+          const intervalId = setInterval(() => {
+              getForecast(historicalData, rate);
+          }, FORECAST_INTERVAL); // Then update every hour
+
+          return () => clearInterval(intervalId);
+      }
+  }, [historicalData, rate, getForecast]);
 
 
   useEffect(() => {
@@ -254,7 +267,7 @@ export default function ClientPage() {
           />
           <CostCard historicalData={historicalData} rate={rate} onRateChange={setRate} />
           
-          <ForecastCard cost={forecastedCost} isLoading={isForecasting} />
+          <ForecastCard cost={forecastedCost} isLoading={isForecasting} lastUpdated={lastForecastUpdate}/>
 
           <HistoryChart data={historicalData} />
         </div>
