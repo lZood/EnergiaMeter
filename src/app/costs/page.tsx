@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -56,8 +57,11 @@ export default function CostsPage() {
     }
     setIsForecasting(true);
     try {
+      // Filtra para asegurar que solo se envían datos válidos
+      const validReadings = currentMonthData.filter(r => typeof r.potencia_w === 'number' && !isNaN(r.potencia_w));
+
       const result = await forecastEnergyCost({
-        readings: currentMonthData,
+        readings: validReadings,
         rate: rate,
       });
       setForecastedCost(result);
