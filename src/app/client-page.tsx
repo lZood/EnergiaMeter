@@ -109,6 +109,21 @@ export default function ClientPage() {
     }
   }, []);
 
+  const handleNewData = useCallback((data: EnergyReading[]) => {
+      setHistoricalData(data);
+      if (data.length > 0) {
+        const latestReading = data[0];
+        setCurrentReading(latestReading);
+        setTime(new Date(latestReading.created_at).toLocaleTimeString());
+        
+        // Call AI functions only when new data arrives, not on every tick
+        if (data.length > historicalData.length) {
+            checkForAnomalies(data);
+            getForecast(data, rate);
+        }
+      }
+  }, [checkForAnomalies, getForecast, rate, historicalData.length]);
+
 
   const fetchData = useCallback(async () => {
     if (!isSupabaseConnected) return;
@@ -126,18 +141,11 @@ export default function ClientPage() {
         title: 'Error al obtener datos',
         description: 'No se pudieron cargar los datos de Supabase.',
       });
-    } else {
-      setHistoricalData(data);
-      if (data.length > 0) {
-        const latestReading = data[0];
-        setCurrentReading(latestReading);
-        setTime(new Date(latestReading.created_at).toLocaleTimeString());
-        checkForAnomalies(data);
-        getForecast(data, rate);
-      }
+    } else if (data) {
+        handleNewData(data);
     }
     if (loading) setLoading(false);
-  }, [isSupabaseConnected, toast, loading, checkForAnomalies, getForecast, rate]);
+  }, [isSupabaseConnected, toast, loading, handleNewData]);
 
 
   useEffect(() => {
@@ -152,15 +160,16 @@ export default function ClientPage() {
             description: 'Por favor, configura tus credenciales de Supabase. Usando datos de prueba.',
             duration: 9000,
         });
-        setHistoricalData(MOCK_HISTORICAL_DATA);
-        setCurrentReading(MOCK_HISTORICAL_DATA[MOCK_HISTORICAL_DATA.length - 1]);
+        
+        handleNewData(MOCK_HISTORICAL_DATA);
+        getForecast(MOCK_HISTORICAL_DATA, rate);
         setLoading(false);
         return;
     }
     
     setIsSupabaseConnected(true);
     setLoading(true);
-  }, [toast]);
+  }, [toast, handleNewData, getForecast, rate]);
   
   useEffect(() => {
     if (isSupabaseConnected) {
@@ -281,5 +290,3 @@ export default function ClientPage() {
     </div>
   );
 }
-
-    
