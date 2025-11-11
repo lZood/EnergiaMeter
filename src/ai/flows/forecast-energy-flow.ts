@@ -39,14 +39,13 @@ const forecastEnergyFlow = ai.defineFlow(
   {
     name: 'forecastEnergyFlow',
     inputSchema: z.object({
-      readings: z.array(z.any()),
-      rate: z.number(),
+        readings: z.array(z.any()),
+        rate: z.number()
     }),
     outputSchema: ForecastOutputSchema,
   },
   async ({ readings, rate }) => {
-    const readingsJSON = JSON.stringify(readings);
-    const { output } = await prompt({ readingsJSON, rate });
+    const { output } = await prompt({ readingsJSON: JSON.stringify(readings), rate });
     return output!;
   }
 );
