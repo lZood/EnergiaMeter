@@ -1,9 +1,9 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
   devIndicators: {
-    buildActivity: false,
+    buildActivity: false, // Esto desactiva el ícono de compilación
   },
   typescript: {
     ignoreBuildErrors: true,

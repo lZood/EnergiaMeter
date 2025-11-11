@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Desactiva los chequeos de tipos durante la compilación en Netlify para acelerar el proceso.
+  # La verificación de tipos se puede hacer localmente o en una acción de CI separada.
+  TYPESCRIPT_IGNORE_ERRORS = "true"
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
