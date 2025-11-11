@@ -56,12 +56,34 @@ export default function CostsPage() {
       return;
     }
     setIsForecasting(true);
-    try {
-      // Filtra para asegurar que solo se envían datos válidos
-      const validReadings = currentMonthData.filter(r => typeof r.potencia_w === 'number' && !isNaN(r.potencia_w));
+    
+    // Agrupa las lecturas por día
+    const readingsByDay = currentMonthData.reduce((acc, reading) => {
+      const day = reading.created_at.split('T')[0];
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push(reading);
+      return acc;
+    }, {} as Record<string, EnergyReading[]>);
 
+    // Muestrea un máximo de 3 lecturas por día
+    const sampledReadings = Object.values(readingsByDay).flatMap(dayReadings => {
+        // Si hay 3 o menos lecturas, las toma todas.
+        if (dayReadings.length <= 3) {
+            return dayReadings;
+        }
+        // Si hay más de 3, toma la primera, la del medio y la última.
+        const first = dayReadings[0];
+        const middle = dayReadings[Math.floor(dayReadings.length / 2)];
+        const last = dayReadings[dayReadings.length - 1];
+        return [first, middle, last];
+    });
+
+
+    try {
       const result = await forecastEnergyCost({
-        readings: validReadings,
+        readings: sampledReadings,
         rate: rate,
       });
       setForecastedCost(result);
