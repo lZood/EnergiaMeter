@@ -8,12 +8,9 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { EnergyReading } from '@/types';
 
-const AnomalyDetectionInputSchema = z.array(
-  z.object({
-    created_at: z.string(),
-    potencia_w: z.number(),
-  })
-).describe("Un array de lecturas de energía para detectar anomalías.");
+const AnomalyDetectionInputSchema = z.object({
+  readingsJSON: z.string().describe("Un string JSON de un array de lecturas de energía para detectar anomalías."),
+});
 
 const AnomalyDetectionOutputSchema = z.object({
   isAnomaly: z.boolean().describe("Indica si se detectó una anomalía en el consumo."),
@@ -29,7 +26,7 @@ const prompt = ai.definePrompt({
   prompt: `Eres un sistema de detección de anomalías para el consumo de energía. Analiza la siguiente serie temporal de lecturas de potencia (en Watts).
 Una anomalía puede ser un pico de consumo repentino y extremo que no sigue el patrón general, o un consumo base (mínimo) que es significativamente más alto en las lecturas más recientes en comparación con las más antiguas.
 
-Datos de consumo: {{{jsonStringify input}}}
+Datos de consumo: {{{readingsJSON}}}
 
 Analiza los datos y determina si la lectura más reciente constituye una anomalía en comparación con el resto del historial.
 - Compara la última lectura con el promedio y la desviación estándar del resto de los datos.
@@ -43,11 +40,16 @@ Responde únicamente con el JSON especificado. Si no hay anomalía, 'isAnomaly' 
 const detectAnomalyFlow = ai.defineFlow(
   {
     name: 'detectAnomalyFlow',
-    inputSchema: AnomalyDetectionInputSchema,
+    inputSchema: z.array(
+      z.object({
+        created_at: z.string(),
+        potencia_w: z.number(),
+      })
+    ),
     outputSchema: AnomalyDetectionOutputSchema,
   },
   async (readings) => {
-    const { output } = await prompt(readings);
+    const { output } = await prompt({ readingsJSON: JSON.stringify(readings) });
     return output!;
   }
 );

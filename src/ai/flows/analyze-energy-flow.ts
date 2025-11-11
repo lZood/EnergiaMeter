@@ -8,16 +8,9 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { EnergyReading } from '@/types';
 
-const AnalyzeEnergyInputSchema = z.array(
-  z.object({
-    created_at: z.string(),
-    potencia_w: z.number(),
-    corriente_a: z.number(),
-    voltaje_v: z.number(),
-    temperatura: z.number(),
-    humedad: z.number(),
-  })
-).describe("Un array de lecturas de energía históricas.");
+const AnalyzeEnergyInputSchema = z.object({
+    readingsJSON: z.string().describe("Un string JSON de un array de lecturas de energía históricas."),
+});
 
 const prompt = ai.definePrompt({
   name: 'energyAnalystPrompt',
@@ -33,7 +26,7 @@ Los datos están en formato JSON y contienen las siguientes claves:
 - humedad: Humedad relativa.
 - created_at: Fecha y hora de la lectura.
 
-Basándote en estos datos: {{{jsonStringify input}}}
+Basándote en estos datos: {{{readingsJSON}}}
 
 1.  Identifica patrones de consumo clave (ej. picos de consumo, consumo base, horarios de mayor uso).
 2.  Proporciona un resumen claro y conciso del comportamiento energético.
@@ -46,11 +39,20 @@ Basándote en estos datos: {{{jsonStringify input}}}
 const analyzeEnergyFlow = ai.defineFlow(
   {
     name: 'analyzeEnergyFlow',
-    inputSchema: AnalyzeEnergyInputSchema,
+    inputSchema: z.array(
+      z.object({
+        created_at: z.string(),
+        potencia_w: z.number(),
+        corriente_a: z.number(),
+        voltaje_v: z.number(),
+        temperatura: z.number(),
+        humedad: z.number(),
+      })
+    ),
     outputSchema: z.string(),
   },
   async (readings) => {
-    const { output } = await prompt(readings);
+    const { output } = await prompt({ readingsJSON: JSON.stringify(readings) });
     return output!;
   }
 );
