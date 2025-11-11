@@ -39,7 +39,7 @@ const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
 );
 
 const REFRESH_INTERVAL = 8000; // 8 seconds
-const FORECAST_INTERVAL = 3600000; // 1 hour
+const FORECAST_INTERVAL = 86400000; // 24 hours
 
 export default function ClientPage() {
   const [currentReading, setCurrentReading] = useState<EnergyReading | null>(
@@ -187,7 +187,7 @@ export default function ClientPage() {
           getForecast(historicalData, rate); // Get initial forecast
           const intervalId = setInterval(() => {
               getForecast(historicalData, rate);
-          }, FORECAST_INTERVAL); // Then update every hour
+          }, FORECAST_INTERVAL); // Then update every 24 hours
 
           return () => clearInterval(intervalId);
       }
@@ -306,5 +306,3 @@ export default function ClientPage() {
     </div>
   );
 }
-
-    
