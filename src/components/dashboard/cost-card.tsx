@@ -15,7 +15,16 @@ export function CostCard({ historicalData }: CostCardProps) {
   const [rate, setRate] = useState<number>(0.15); // Tarifa por defecto, ej. $0.15/kWh
 
   const { totalKWh, estimatedCost } = useMemo(() => {
-    if (!historicalData || historicalData.length < 2) {
+    if (!historicalData || historicalData.length === 0) {
+      return { totalKWh: 0, estimatedCost: 0 };
+    }
+
+    // Si solo hay un punto de datos, no podemos calcular el intervalo de tiempo.
+    // Podríamos asumir un pequeño intervalo o simplemente devolver 0.
+    // Por simplicidad y para evitar cálculos erróneos, devolvemos 0 si hay menos de 2 puntos.
+    if (historicalData.length < 2) {
+      // Opcional: podríamos estimar el consumo si solo hay un punto, pero sería una suposición.
+      // Por ahora, lo mantenemos simple.
       return { totalKWh: 0, estimatedCost: 0 };
     }
 
@@ -32,13 +41,17 @@ export function CostCard({ historicalData }: CostCardProps) {
         (new Date(curr.created_at).getTime() -
           new Date(prev.created_at).getTime()) /
         1000;
+      
       // Evitar división por cero o valores negativos si los timestamps son iguales o están desordenados
       if (timeDiffSeconds <= 0) continue;
+
+      // Usamos el promedio de potencia entre dos puntos para una mejor aproximación del consumo en ese intervalo
       const avgPower = (prev.potencia_w + curr.potencia_w) / 2;
       totalWattSeconds += avgPower * timeDiffSeconds;
     }
 
-    const totalKWh = totalWattSeconds / (3600 * 1000);
+    // 1 kWh = 1000 Wh = 3,600,000 Ws
+    const totalKWh = totalWattSeconds / 3600000;
     const estimatedCost = totalKWh * rate;
 
     return { totalKWh, estimatedCost };
