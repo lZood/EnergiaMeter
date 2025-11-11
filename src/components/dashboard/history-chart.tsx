@@ -44,7 +44,7 @@ export function HistoryChart({ data }: HistoryChartProps) {
   }, [data]);
 
   return (
-    <Card className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+    <Card>
       <CardHeader>
         <CardTitle>Historial de Consumo</CardTitle>
         <CardDescription>
@@ -56,7 +56,7 @@ export function HistoryChart({ data }: HistoryChartProps) {
           <ChartContainer config={chartConfig} className="h-[250px] w-full">
             <AreaChart
               data={formattedData}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
             >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
@@ -70,9 +70,9 @@ export function HistoryChart({ data }: HistoryChartProps) {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                fontSize={12}
+                fontSize={10}
                 tickFormatter={(value) => `${value}`}
-                label={{ value: 'Watts', angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle' } }}
+                label={{ value: 'Watts', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle', fontSize: '10px' } }}
               />
               <ChartTooltip
                 cursor={false}

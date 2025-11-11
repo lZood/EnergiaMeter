@@ -170,14 +170,14 @@ export default function ClientPage() {
     return (
       <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8">
         <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing}/>
-        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
-          <Skeleton className="col-span-1 sm:col-span-2 lg:col-span-4 h-80" />
+          <Skeleton className="col-span-2 lg:col-span-4 h-80" />
         </div>
       </div>
     );
@@ -188,7 +188,7 @@ export default function ClientPage() {
        {isSupabaseConnected && <Timer duration={REFRESH_INTERVAL} onComplete={fetchData} />}
       <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing} />
       <main className="w-full max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <EnergyCard
             title="Potencia Actual"
             value={currentReading ? currentReading.potencia_w.toFixed(0) : '0'}
@@ -228,7 +228,9 @@ export default function ClientPage() {
             icon={Droplets}
           />
           
-          <HistoryChart data={historicalData} />
+          <div className="col-span-2 lg:col-span-4">
+            <HistoryChart data={historicalData} />
+          </div>
         </div>
       </main>
 
