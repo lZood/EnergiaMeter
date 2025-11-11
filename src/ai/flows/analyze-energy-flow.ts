@@ -16,23 +16,12 @@ const prompt = ai.definePrompt({
   name: 'energyAnalystPrompt',
   input: { schema: AnalyzeEnergyInputSchema },
   output: { format: 'text' },
-  prompt: `Eres un analista experto en eficiencia energética. Tu tarea es analizar los siguientes datos de consumo de energía de un hogar o pequeña empresa.
+  prompt: `Eres un analista experto en eficiencia energética. Analiza los siguientes datos de consumo: {{{readingsJSON}}}.
+Tu respuesta debe ser extremadamente concisa, en español y no superar los 500 caracteres en total.
 
-Los datos están en formato JSON y contienen las siguientes claves:
-- potencia_w: Potencia consumida en Watts.
-- corriente_a: Corriente en Amperios.
-- voltaje_v: Voltaje en Volts.
-- temperatura: Temperatura ambiente en Celsius.
-- humedad: Humedad relativa.
-- created_at: Fecha y hora de la lectura.
-
-Basándote en estos datos: {{{readingsJSON}}}
-
-1.  Identifica patrones de consumo clave (ej. picos de consumo, consumo base, horarios de mayor uso).
-2.  Proporciona un resumen claro y conciso del comportamiento energético.
-3.  Ofrece 2-3 recomendaciones prácticas y accionables para que el usuario pueda reducir su consumo de energía y ahorrar dinero.
-4.  Tu respuesta debe ser amigable, fácil de entender para alguien sin conocimientos técnicos y estar en español.
-5.  Formatea tu respuesta de forma legible, usando saltos de línea.
+1.  Proporciona un resumen muy breve (una sola frase) del comportamiento energético.
+2.  Ofrece 1 o 2 recomendaciones prácticas y muy breves para ahorrar energía.
+3.  Usa un tono directo y amigable. No uses listas, solo párrafos cortos.
 `,
 });
 
