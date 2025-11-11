@@ -39,8 +39,13 @@ const forecastEnergyFlow = ai.defineFlow(
   {
     name: 'forecastEnergyFlow',
     inputSchema: z.object({
-        readings: z.array(z.any()),
-        rate: z.number()
+      readings: z.array(
+        z.object({
+          created_at: z.string(),
+          potencia_w: z.number(),
+        })
+      ),
+      rate: z.number(),
     }),
     outputSchema: ForecastOutputSchema,
   },
@@ -50,7 +55,9 @@ const forecastEnergyFlow = ai.defineFlow(
   }
 );
 
-export async function forecastEnergyCost(readings: EnergyReading[], rate: number): Promise<number> {
+
+export async function forecastEnergyCost(data: { readings: EnergyReading[], rate: number }): Promise<number> {
+  const { readings, rate } = data;
   if (readings.length < 5) return 0;
 
   // Preparamos los datos para que solo contengan los campos relevantes para el prompt.

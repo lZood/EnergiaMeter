@@ -44,7 +44,7 @@ export default function CostsPage() {
     }
     setIsForecasting(true);
     try {
-      const cost = await forecastEnergyCost(historicalData, rate);
+      const cost = await forecastEnergyCost({ readings: historicalData, rate });
       setForecastedCost(cost);
       setLastForecastUpdate(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
     } catch (error) {
