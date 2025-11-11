@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 
 export const metadata: Metadata = {
-  title: 'EnergyGlimpse',
+  title: 'Vistazo Energético',
   description: 'Monitorea tu consumo de energía en tiempo real.',
 };
 

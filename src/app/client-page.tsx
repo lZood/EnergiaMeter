@@ -8,6 +8,7 @@ import { DashboardHeader } from '@/components/dashboard/header';
 import { EnergyCard } from '@/components/dashboard/energy-card';
 import { HistoryChart } from '@/components/dashboard/history-chart';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Timer } from '@/components/dashboard/timer';
 import { analyzeEnergyConsumption } from '@/ai/flows/analyze-energy-flow';
@@ -169,7 +170,7 @@ export default function ClientPage() {
   if (loading && isSupabaseConnected) {
     return (
       <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8">
-        <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing}/>
+        <DashboardHeader />
         <div className="w-full max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
@@ -186,7 +187,7 @@ export default function ClientPage() {
   return (
     <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8 relative">
        {isSupabaseConnected && <Timer duration={REFRESH_INTERVAL} onComplete={fetchData} />}
-      <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing} />
+      <DashboardHeader />
       <main className="w-full max-w-7xl mx-auto">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <EnergyCard
@@ -261,6 +262,20 @@ export default function ClientPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Button
+        onClick={handleAnalysis}
+        disabled={isAnalyzing}
+        className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg z-50"
+        size="icon"
+      >
+        {isAnalyzing ? (
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-foreground"></div>
+        ) : (
+          <Sparkles className="h-8 w-8" />
+        )}
+        <span className="sr-only">Analizar Consumo</span>
+      </Button>
     </div>
   );
 }
