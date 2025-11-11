@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { EnergyReading } from '@/types';
 import { Zap, Clock, TrendingUp, Droplets, Thermometer, Gauge } from 'lucide-react';
@@ -10,6 +10,7 @@ import { HistoryChart } from '@/components/dashboard/history-chart';
 import { CostCard } from '@/components/dashboard/cost-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { Timer } from '@/components/dashboard/timer';
 
 const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
   { length: 20 },
@@ -24,6 +25,8 @@ const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
   })
 );
 
+const REFRESH_INTERVAL = 8000; // 8 seconds
+
 export default function ClientPage() {
   const [currentReading, setCurrentReading] = useState<EnergyReading | null>(
     null
@@ -33,7 +36,35 @@ export default function ClientPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
-  const [hasShownConnectionError, setHasShownConnectionError] = useState(false);
+  const [time, setTime] = useState('N/A');
+
+  const fetchData = useCallback(async () => {
+    if (!isSupabaseConnected) return;
+
+    const { data, error } = await supabase
+      .from('lecturas')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100); // Limit to last 100 entries for performance
+
+    if (error) {
+      console.error('Error al obtener datos:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al obtener datos',
+        description: 'No se pudieron cargar los datos de Supabase.',
+      });
+    } else {
+      setHistoricalData(data);
+      if (data.length > 0) {
+        const latestReading = data[0];
+        setCurrentReading(latestReading);
+        setTime(new Date(latestReading.created_at).toLocaleTimeString());
+      }
+    }
+    if (loading) setLoading(false);
+  }, [isSupabaseConnected, toast, loading]);
+
 
   useEffect(() => {
     const checkSupabaseConnection = () => {
@@ -54,72 +85,15 @@ export default function ClientPage() {
     }
     
     setIsSupabaseConnected(true);
+    setLoading(true);
+  }, [toast]);
+  
+  useEffect(() => {
+    if (isSupabaseConnected) {
+      fetchData();
+    }
+  }, [isSupabaseConnected, fetchData]);
 
-    const fetchInitialData = async () => {
-      setLoading(true);
-      const oneDayAgo = new Date(
-        Date.now() - 24 * 60 * 60 * 1000
-      ).toISOString();
-      const { data, error } = await supabase
-        .from('lecturas')
-        .select('*')
-        .gte('created_at', oneDayAgo)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error al obtener datos iniciales:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error al obtener datos',
-          description: 'Revisa tu conexión a Supabase y el nombre de la tabla. Usando datos de prueba.',
-        });
-        setHistoricalData(MOCK_HISTORICAL_DATA);
-        if (MOCK_HISTORICAL_DATA.length > 0) {
-            setCurrentReading(MOCK_HISTORICAL_DATA[MOCK_HISTORICAL_DATA.length - 1]);
-        }
-      } else {
-        setHistoricalData(data);
-        if (data.length > 0) {
-          setCurrentReading(data[0]);
-        }
-      }
-      setLoading(false);
-    };
-
-    fetchInitialData();
-
-    const channel = supabase
-      .channel('lecturas_channel')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'lecturas' },
-        (payload) => {
-          const newReading = payload.new as EnergyReading;
-          setCurrentReading(newReading);
-          setHistoricalData((prevData) => [newReading, ...prevData].slice(0, 1000));
-        }
-      )
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('¡Suscrito a lecturas de energía en tiempo real!');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error en el canal de Supabase:', err);
-          if (!hasShownConnectionError) {
-             toast({
-                variant: 'destructive',
-                title: 'Falló la conexión en tiempo real',
-                description: 'No se pudo establecer una conexión en tiempo real. Revisa tus credenciales de Supabase y las políticas RLS.',
-             });
-             setHasShownConnectionError(true);
-          }
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     if (historicalData.length > 0) {
@@ -130,20 +104,6 @@ export default function ClientPage() {
       setAvgPower(totalPower / historicalData.length);
     }
   }, [historicalData]);
-  
-  const [time, setTime] = useState('N/A');
-
-  useEffect(() => {
-      if(currentReading) {
-        setTime(new Date(currentReading.created_at).toLocaleTimeString());
-      }
-      const interval = setInterval(() => {
-          if (currentReading) {
-             setTime(new Date(currentReading.created_at).toLocaleTimeString());
-          }
-      }, 60000);
-      return () => clearInterval(interval);
-  }, [currentReading]);
 
 
   if (loading && isSupabaseConnected) {
@@ -165,7 +125,8 @@ export default function ClientPage() {
   }
 
   return (
-    <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8">
+    <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8 relative">
+       {isSupabaseConnected && <Timer duration={REFRESH_INTERVAL} onComplete={fetchData} />}
       <DashboardHeader />
       <main className="w-full max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
