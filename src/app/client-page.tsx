@@ -33,6 +33,7 @@ export default function ClientPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+  const [hasShownConnectionError, setHasShownConnectionError] = useState(false);
 
   useEffect(() => {
     const checkSupabaseConnection = () => {
@@ -95,24 +96,22 @@ export default function ClientPage() {
         (payload) => {
           const newReading = payload.new as EnergyReading;
           setCurrentReading(newReading);
-          setHistoricalData((prevData) => [newReading, ...prevData].slice(0, 1000)); // Mantener los últimos 1000 puntos
+          setHistoricalData((prevData) => [newReading, ...prevData].slice(0, 1000));
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           console.log('¡Suscrito a lecturas de energía en tiempo real!');
-        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-          // Puede fallar silenciosamente si las credenciales son incorrectas.
-          // Verifiquemos si hemos recibido algún dato. Si no, muestra un toast.
-          setTimeout(() => {
-            if (historicalData.length === 0 && !currentReading) {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Falló la conexión en tiempo real',
-                    description: 'No se pudo establecer una conexión en tiempo real. Revisa tus credenciales de Supabase y las políticas RLS.',
-                 });
-            }
-          }, 3000)
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error en el canal de Supabase:', err);
+          if (!hasShownConnectionError) {
+             toast({
+                variant: 'destructive',
+                title: 'Falló la conexión en tiempo real',
+                description: 'No se pudo establecer una conexión en tiempo real. Revisa tus credenciales de Supabase y las políticas RLS.',
+             });
+             setHasShownConnectionError(true);
+          }
         }
       });
 
@@ -120,7 +119,7 @@ export default function ClientPage() {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast, isSupabaseConnected]);
+  }, []);
 
   useEffect(() => {
     if (historicalData.length > 0) {

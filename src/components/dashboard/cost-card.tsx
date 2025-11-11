@@ -15,7 +15,7 @@ export function CostCard({ historicalData }: CostCardProps) {
   const [rate, setRate] = useState<number>(0.15); // Tarifa por defecto, ej. $0.15/kWh
 
   const { totalKWh, estimatedCost } = useMemo(() => {
-    if (historicalData.length < 2) {
+    if (!historicalData || historicalData.length < 2) {
       return { totalKWh: 0, estimatedCost: 0 };
     }
 
@@ -32,6 +32,8 @@ export function CostCard({ historicalData }: CostCardProps) {
         (new Date(curr.created_at).getTime() -
           new Date(prev.created_at).getTime()) /
         1000;
+      // Evitar división por cero o valores negativos si los timestamps son iguales o están desordenados
+      if (timeDiffSeconds <= 0) continue;
       const avgPower = (prev.potencia_w + curr.potencia_w) / 2;
       totalWattSeconds += avgPower * timeDiffSeconds;
     }
