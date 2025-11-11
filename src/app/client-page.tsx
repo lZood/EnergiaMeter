@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Timer } from '@/components/dashboard/timer';
 import { analyzeEnergyConsumption } from '@/ai/flows/analyze-energy-flow';
-import { detectAnomaly } from '@/ai/flows/detect-anomaly-flow';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -71,24 +70,6 @@ export default function ClientPage() {
       setIsAnalyzing(false);
     }
   };
-
-  const checkForAnomalies = useCallback(async (data: EnergyReading[]) => {
-    if (data.length < 10) return; // Need enough data to detect anomalies
-
-    try {
-      const anomalyResult = await detectAnomaly(data);
-      if (anomalyResult.isAnomaly) {
-        toast({
-          variant: 'destructive',
-          title: '¡Alerta de Anomalía!',
-          description: anomalyResult.reason,
-          duration: 9000,
-        });
-      }
-    } catch (error) {
-      console.error("Error al detectar anomalías:", error);
-    }
-  }, [toast]);
   
 
   const handleNewData = useCallback((newData: EnergyReading[]) => {
@@ -122,11 +103,11 @@ export default function ClientPage() {
         handleNewData(data);
         // Only check for anomalies if new data has actually arrived
         if (data.length > 0 && data.length > currentDataLength) {
-            checkForAnomalies(data);
+            //
         }
     }
     if (loading) setLoading(false);
-  }, [isSupabaseConnected, toast, loading, handleNewData, checkForAnomalies, historicalData.length]);
+  }, [isSupabaseConnected, toast, loading, handleNewData, historicalData.length]);
 
 
   useEffect(() => {

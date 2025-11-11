@@ -1,73 +1,77 @@
 'use server';
 /**
- * @fileOverview Flujo de IA para pronosticar el consumo y costo energético mensual.
+ * @fileOverview Flujo de IA para pronosticar el costo energético mensual.
  *
- * - forecastEnergyCost: Analiza datos históricos y la tarifa para predecir el costo a 30 días.
+ * - forecastEnergyCost: Calcula el costo proyectado para 30 días.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import type { EnergyReading } from '@/types';
 
 const ForecastInputSchema = z.object({
-  readingsJSON: z.string().describe("Un string JSON de un array de lecturas de energía históricas (solo potencia_w y created_at)."),
-  rate: z.number().describe("La tarifa actual en costo por kWh."),
-});
-
-const ForecastOutputSchema = z.object({
-  forecastedCost: z
-    .number()
-    .describe('El costo total estimado para un período de 30 días.'),
+  readings: z.array(
+    z.object({
+      created_at: z.string(),
+      potencia_w: z.number(),
+    })
+  ),
+  rate: z.number().describe('La tarifa de costo por kWh en la moneda local.'),
 });
 
 const prompt = ai.definePrompt({
-  name: 'energyForecastPrompt',
+  name: 'energyForecasterPrompt',
   input: { schema: ForecastInputSchema },
-  output: { schema: ForecastOutputSchema },
-  prompt: `Eres un analista de datos especializado en proyecciones de consumo energético. Tu tarea es analizar una serie de lecturas de energía y una tarifa por kWh para predecir el costo total al final de un período de 30 días.
+  output: { format: 'json' },
+  prompt: `Eres un analista de datos especializado en consumo energético. Te proporcionaré una serie de lecturas de potencia (en vatios) de un período de tiempo parcial dentro de un mes.
 
-Datos de consumo histórico (potencia en Watts): {{{readingsJSON}}}
-Tarifa por kWh: {{{rate}}}
+Tu tarea es:
+1. Analizar el patrón de consumo de los datos proporcionados.
+2. Estimar el consumo total de energía en kWh para un mes completo de 30 días.
+3. Calcular el costo monetario total estimado para esos 30 días, utilizando la tarifa de $/kWh que te proporciono.
 
-1.  Calcula el consumo total de energía en kWh a partir de los datos proporcionados. Para ello, integra la potencia (Watts) a lo largo del tiempo (segundos) y convierte el resultado de Watt-segundo a kWh (1 kWh = 3,600,000 Watt-segundos).
-2.  Calcula la duración total del período de muestreo en días.
-3.  Calcula el consumo promedio diario en kWh.
-4.  Proyecta ese consumo promedio a lo largo de un período de 30 días para obtener los kWh totales del mes.
-5.  Calcula el costo total estimado multiplicando los kWh proyectados por la tarifa.
-6.  Devuelve el resultado únicamente en el formato JSON especificado. No incluyas explicaciones adicionales.
+Devuelve únicamente un objeto JSON con la clave "forecastedCost", que contenga el valor numérico del costo total mensual estimado. No incluyas unidades ni texto adicional.
+
+Datos de consumo: {{{jsonStringify readings}}}
+Tarifa: {{{rate}}} $/kWh
 `,
 });
 
 const forecastEnergyFlow = ai.defineFlow(
   {
     name: 'forecastEnergyFlow',
-    inputSchema: z.object({
-      readings: z.array(
-        z.object({
-          created_at: z.string(),
-          potencia_w: z.number(),
-        })
-      ),
-      rate: z.number(),
-    }),
-    outputSchema: ForecastOutputSchema,
+    inputSchema: ForecastInputSchema,
+    outputSchema: z.number(),
   },
   async ({ readings, rate }) => {
-    const { output } = await prompt({ readingsJSON: JSON.stringify(readings), rate });
-    return output!;
+    // La IA es más efectiva con una cantidad razonable de datos.
+    const limitedReadings = readings.slice(-1000); // Usar las últimas 1000 lecturas
+
+    const { output } = await prompt({
+      readings: limitedReadings,
+      rate,
+    });
+    
+    if (!output) {
+      throw new Error("La IA no generó una respuesta.");
+    }
+    
+    // Asumimos que la IA devuelve un JSON como { "forecastedCost": 123.45 }
+    return output.forecastedCost;
   }
 );
 
-
-export async function forecastEnergyCost(data: { readings: EnergyReading[], rate: number }): Promise<number> {
-  const { readings, rate } = data;
-  if (readings.length < 5) return 0;
-
-  // Preparamos los datos para que solo contengan los campos relevantes para el prompt.
-  const preparedReadings = readings.map(r => ({
-      created_at: r.created_at,
-      potencia_w: r.potencia_w,
+export async function forecastEnergyCost(input: {
+  readings: EnergyReading[];
+  rate: number;
+}): Promise<number> {
+  // Preparamos los datos, enviando solo lo necesario a la IA.
+  const preparedReadings = input.readings.map((r) => ({
+    created_at: r.created_at,
+    potencia_w: r.potencia_w,
   }));
-  
-  const result = await forecastEnergyFlow({ readings: preparedReadings, rate });
-  return result.forecastedCost;
+
+  return await forecastEnergyFlow({
+    readings: preparedReadings,
+    rate: input.rate,
+  });
 }

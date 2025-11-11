@@ -1,25 +1,29 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { EnergyReading } from '@/types';
 import { CostCard } from '@/components/dashboard/cost-card';
 import { ForecastCard } from '@/components/dashboard/forecast-card';
-import { forecastEnergyCost } from '@/ai/flows/forecast-energy-flow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { forecastEnergyCost } from '@/ai/flows/forecast-energy-flow';
 
 const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
-  { length: 20 },
-  (_, i) => ({
+  { length: 100 },
+  (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - Math.floor(i / 5)); // Simulate data over several days
+    date.setMinutes(date.getMinutes() - (i % 288) * 5); // 288 5-min intervals in a day
+    return {
     id: `mock-${i}`,
-    created_at: new Date(Date.now() - (20 - i) * 60000).toISOString(),
-    potencia_w: Math.floor(Math.random() * 200 + 50 + Math.sin(i / 5) * 30),
+    created_at: date.toISOString(),
+    potencia_w: Math.floor(Math.random() * 200 + 50 + Math.sin(i / 20) * 30),
     corriente_a: Math.random() * 2,
     voltaje_v: Math.random() * 10 + 220,
     temperatura: Math.random() * 10 + 20,
     humedad: Math.random() * 20 + 50,
-  })
+  }}
 );
 
 export default function CostsPage() {
@@ -31,33 +35,42 @@ export default function CostsPage() {
   
   const [forecastedCost, setForecastedCost] = useState<number>(0);
   const [isForecasting, setIsForecasting] = useState(false);
-  const [lastForecastUpdate, setLastForecastUpdate] = useState<string | null>(null);
+
+  const currentMonthData = useMemo(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    return historicalData.filter(
+      (reading) => new Date(reading.created_at) >= startOfMonth
+    );
+  }, [historicalData]);
 
   const getForecast = useCallback(async () => {
-    if (historicalData.length < 10) {
-        toast({
-            variant: 'destructive',
-            title: 'Datos insuficientes',
-            description: 'Se necesitan más lecturas para realizar un pronóstico preciso.',
-        });
-        return;
+    if (currentMonthData.length < 10) {
+      toast({
+        title: 'Datos insuficientes para pronóstico',
+        description: 'Se necesitan más lecturas del mes actual para realizar un pronóstico preciso.',
+        variant: 'destructive',
+      });
+      return;
     }
     setIsForecasting(true);
     try {
-      const cost = await forecastEnergyCost({ readings: historicalData, rate });
-      setForecastedCost(cost);
-      setLastForecastUpdate(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
+      const result = await forecastEnergyCost({
+        readings: currentMonthData,
+        rate: rate,
+      });
+      setForecastedCost(result);
     } catch (error) {
       console.error("Error al obtener el pronóstico:", error);
       toast({
-            variant: 'destructive',
-            title: 'Error de Pronóstico',
-            description: 'No se pudo calcular el pronóstico. Inténtalo de nuevo.',
+        variant: 'destructive',
+        title: 'Error de Pronóstico',
+        description: 'No se pudo calcular el pronóstico. La IA no pudo procesar la solicitud.',
       });
     } finally {
       setIsForecasting(false);
     }
-  }, [historicalData, rate, toast]);
+  }, [currentMonthData, rate, toast]);
 
   useEffect(() => {
     const checkSupabaseConnection = () => {
@@ -73,11 +86,12 @@ export default function CostsPage() {
     setIsSupabaseConnected(true);
 
     const fetchData = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from('lecturas')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(500); // Fetch more data for better forecasting
+        .limit(2000); // Fetch more data for better forecasting accuracy
 
       if (error) {
         console.error('Error al obtener datos:', error);
@@ -94,6 +108,13 @@ export default function CostsPage() {
 
     fetchData();
   }, [toast]);
+
+  useEffect(() => {
+    if (currentMonthData.length > 0) {
+      getForecast();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonthData]);
   
 
   if (loading) {
@@ -113,12 +134,10 @@ export default function CostsPage() {
       <h1 className="text-3xl font-bold tracking-tight">Costos y Pronóstico</h1>
       <main className="w-full max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <CostCard historicalData={historicalData} rate={rate} onRateChange={setRate} />
+          <CostCard historicalData={currentMonthData} rate={rate} onRateChange={setRate} />
           <ForecastCard 
             cost={forecastedCost} 
             isLoading={isForecasting} 
-            lastUpdated={lastForecastUpdate}
-            onForecast={getForecast}
           />
         </div>
       </main>
