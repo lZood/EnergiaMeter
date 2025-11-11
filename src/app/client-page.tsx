@@ -7,14 +7,11 @@ import { Zap, TrendingUp, Droplets, Thermometer, Gauge, Sparkles } from 'lucide-
 import { DashboardHeader } from '@/components/dashboard/header';
 import { EnergyCard } from '@/components/dashboard/energy-card';
 import { HistoryChart } from '@/components/dashboard/history-chart';
-import { CostCard } from '@/components/dashboard/cost-card';
-import { ForecastCard } from '@/components/dashboard/forecast-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Timer } from '@/components/dashboard/timer';
 import { analyzeEnergyConsumption } from '@/ai/flows/analyze-energy-flow';
 import { detectAnomaly } from '@/ai/flows/detect-anomaly-flow';
-import { forecastEnergyCost } from '@/ai/flows/forecast-energy-flow';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -39,7 +36,6 @@ const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
 );
 
 const REFRESH_INTERVAL = 8000; // 8 seconds
-const FORECAST_INTERVAL = 86400000; // 24 hours
 
 export default function ClientPage() {
   const [currentReading, setCurrentReading] = useState<EnergyReading | null>(
@@ -51,17 +47,11 @@ export default function ClientPage() {
   const { toast } = useToast();
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
   const [time, setTime] = useState('N/A');
-  const [rate, setRate] = useState<number>(0.803);
 
   const [isAnalysisDialogOpen, setAnalysisDialogOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  const [forecastedCost, setForecastedCost] = useState<number>(0);
-  const [isForecasting, setIsForecasting] = useState(false);
-  const [lastForecastUpdate, setLastForecastUpdate] = useState<string | null>(null);
-
-
   const handleAnalysis = async () => {
     if (!historicalData || historicalData.length < 5) {
       setAnalysisResult("No hay suficientes datos para realizar un análisis. Espera a que se recopilen más lecturas.");
@@ -99,19 +89,6 @@ export default function ClientPage() {
     }
   }, [toast]);
   
-  const getForecast = useCallback(async () => {
-    if (historicalData.length < 10) return;
-    setIsForecasting(true);
-    try {
-      const cost = await forecastEnergyCost(historicalData, rate);
-      setForecastedCost(cost);
-      setLastForecastUpdate(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
-    } catch (error) {
-      console.error("Error al obtener el pronóstico:", error);
-    } finally {
-      setIsForecasting(false);
-    }
-  }, [historicalData, rate]);
 
   const handleNewData = useCallback((newData: EnergyReading[]) => {
       setHistoricalData(newData);
@@ -142,7 +119,8 @@ export default function ClientPage() {
     } else if (data) {
         const currentDataLength = historicalData.length;
         handleNewData(data);
-        if (data.length > currentDataLength) {
+        // Only check for anomalies if new data has actually arrived
+        if (data.length > 0 && data.length > currentDataLength) {
             checkForAnomalies(data);
         }
     }
@@ -162,37 +140,20 @@ export default function ClientPage() {
             description: 'Por favor, configura tus credenciales de Supabase. Usando datos de prueba.',
             duration: 9000,
         });
-        setHistoricalData(MOCK_HISTORICAL_DATA);
+        handleNewData(MOCK_HISTORICAL_DATA);
         setLoading(false);
         return;
     }
     
     setIsSupabaseConnected(true);
     setLoading(true);
-  }, [toast]);
+  }, [toast, handleNewData]);
   
   useEffect(() => {
     if (isSupabaseConnected) {
       fetchData();
     }
   }, [isSupabaseConnected, fetchData]);
-
-  // Effect for forecast, runs independently
-  useEffect(() => {
-    // Only run forecast logic if we have some data
-    if (historicalData.length > 0) {
-        getForecast(); // Get initial forecast when data is first loaded
-
-        const intervalId = setInterval(() => {
-            getForecast();
-        }, FORECAST_INTERVAL); // Then update every 24 hours
-
-        return () => clearInterval(intervalId); // Cleanup on unmount
-    }
-    // The dependency array ensures this effect only re-runs if getForecast function identity changes,
-    // or when historicalData transitions from empty to populated.
-  }, [historicalData.length > 0, getForecast]);
-
 
   useEffect(() => {
     if (historicalData.length > 0) {
@@ -209,16 +170,14 @@ export default function ClientPage() {
     return (
       <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8">
         <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing}/>
-        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-          <Skeleton className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 h-80" />
+          <Skeleton className="col-span-1 sm:col-span-2 lg:col-span-4 h-80" />
         </div>
       </div>
     );
@@ -229,7 +188,7 @@ export default function ClientPage() {
        {isSupabaseConnected && <Timer duration={REFRESH_INTERVAL} onComplete={fetchData} />}
       <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing} />
       <main className="w-full max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <EnergyCard
             title="Potencia Actual"
             value={currentReading ? currentReading.potencia_w.toFixed(0) : '0'}
@@ -268,10 +227,7 @@ export default function ClientPage() {
             unit="%"
             icon={Droplets}
           />
-          <CostCard historicalData={historicalData} rate={rate} onRateChange={setRate} />
           
-          <ForecastCard cost={forecastedCost} isLoading={isForecasting} lastUpdated={lastForecastUpdate}/>
-
           <HistoryChart data={historicalData} />
         </div>
       </main>

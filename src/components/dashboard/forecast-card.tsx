@@ -12,14 +12,14 @@ interface ForecastCardProps {
 
 export function ForecastCard({ cost, isLoading, lastUpdated }: ForecastCardProps) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">Pronóstico Mensual</CardTitle>
         <TrendingUp className="h-5 w-5 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2 pt-2">
             <Skeleton className="h-8 w-2/4" />
             <Skeleton className="h-4 w-4/5" />
           </div>

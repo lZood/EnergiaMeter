@@ -15,17 +15,8 @@ interface CostCardProps {
 
 export function CostCard({ historicalData, rate, onRateChange }: CostCardProps) {
   const { totalKWh, estimatedCost } = useMemo(() => {
-    if (!historicalData || historicalData.length === 0) {
+    if (!historicalData || historicalData.length < 2) {
       return { totalKWh: 0, estimatedCost: 0 };
-    }
-
-    if (historicalData.length < 2) {
-      // Estimate based on a single point, assuming it ran for the refresh interval (e.g., 8 seconds)
-      const lastReading = historicalData[0];
-      const wattSeconds = lastReading.potencia_w * 8; // Assuming 8 seconds of consumption
-      const totalKWh = wattSeconds / 3600000;
-      const estimatedCost = totalKWh * rate;
-      return { totalKWh, estimatedCost };
     }
 
     let totalWattSeconds = 0;
@@ -44,6 +35,7 @@ export function CostCard({ historicalData, rate, onRateChange }: CostCardProps) 
       
       if (timeDiffSeconds <= 0) continue;
 
+      // Use average power over the interval for better accuracy (trapezoidal rule)
       const avgPower = (prev.potencia_w + curr.potencia_w) / 2;
       totalWattSeconds += avgPower * timeDiffSeconds;
     }
@@ -55,7 +47,7 @@ export function CostCard({ historicalData, rate, onRateChange }: CostCardProps) 
   }, [historicalData, rate]);
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">Costo Acumulado</CardTitle>
         <DollarSign className="h-5 w-5 text-muted-foreground" />
@@ -65,7 +57,7 @@ export function CostCard({ historicalData, rate, onRateChange }: CostCardProps) 
           ${estimatedCost.toFixed(2)}
         </div>
         <p className="text-xs text-muted-foreground">
-          Basado en {totalKWh.toFixed(3)} kWh consumidos
+          Basado en {totalKWh.toFixed(3)} kWh consumidos en el período
         </p>
         <div className="mt-4 space-y-2">
           <Label htmlFor="kwh-rate" className="text-xs">
@@ -76,7 +68,7 @@ export function CostCard({ historicalData, rate, onRateChange }: CostCardProps) 
             type="number"
             value={rate}
             onChange={(e) => onRateChange(parseFloat(e.target.value) || 0)}
-            step="0.01"
+            step="0.001"
             className="h-8"
           />
         </div>
