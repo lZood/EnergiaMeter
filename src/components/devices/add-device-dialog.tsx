@@ -79,7 +79,7 @@ export function AddDeviceDialog({ isOpen, onOpenChange, onAddDevice }: AddDevice
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="lightbulb">Bombilla</SelectItem>
-                    <SelectItem value="fridge">Refrigerador</SelectItem>
+                    <SelectItem value="refrigerator">Refrigerador</SelectItem>
                     <SelectItem value="tv">Televisión</SelectItem>
                     <SelectItem value="fan">Ventilador</SelectItem>
                     <SelectItem value="ac">Aire Acondicionado</SelectItem>

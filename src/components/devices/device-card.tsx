@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Lightbulb, Fridge, Tv, Fan, AirVent, SlidersHorizontal, Power, Trash2 } from 'lucide-react';
+import { Lightbulb, Refrigerator, Tv, Fan, AirVent, SlidersHorizontal, Power, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Device } from '@/types';
 
@@ -17,7 +17,7 @@ interface DeviceCardProps {
 
 const iconMap = {
   lightbulb: Lightbulb,
-  fridge: Fridge,
+  refrigerator: Refrigerator,
   tv: Tv,
   fan: Fan,
   ac: AirVent,
