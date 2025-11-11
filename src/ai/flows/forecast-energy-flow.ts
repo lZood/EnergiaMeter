@@ -9,12 +9,7 @@ import { z } from 'genkit';
 import type { EnergyReading } from '@/types';
 
 const ForecastInputSchema = z.object({
-  readings: z.array(
-    z.object({
-      created_at: z.string(),
-      potencia_w: z.number(),
-    })
-  ),
+  readingsJSON: z.string().describe("Un string JSON de lecturas de energía."),
   rate: z.number().describe('La tarifa de costo por kWh en la moneda local.'),
 });
 
@@ -31,7 +26,7 @@ Tu tarea es:
 
 Devuelve únicamente un objeto JSON con la clave "forecastedCost", que contenga el valor numérico del costo total mensual estimado. No incluyas unidades ni texto adicional.
 
-Datos de consumo: {{{JSON.stringify readings}}}
+Datos de consumo: {{{readingsJSON}}}
 Tarifa: {{{rate}}} $/kWh
 `,
 });
@@ -39,7 +34,13 @@ Tarifa: {{{rate}}} $/kWh
 const forecastEnergyFlow = ai.defineFlow(
   {
     name: 'forecastEnergyFlow',
-    inputSchema: ForecastInputSchema,
+    inputSchema: z.object({
+      readings: z.array(z.object({
+        created_at: z.string(),
+        potencia_w: z.number(),
+      })),
+      rate: z.number(),
+    }),
     outputSchema: z.number(),
   },
   async ({ readings, rate }) => {
@@ -47,7 +48,7 @@ const forecastEnergyFlow = ai.defineFlow(
     const limitedReadings = readings.slice(-1000); // Usar las últimas 1000 lecturas
 
     const { output } = await prompt({
-      readings: limitedReadings,
+      readingsJSON: JSON.stringify(limitedReadings),
       rate,
     });
     
