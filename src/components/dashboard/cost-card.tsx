@@ -5,27 +5,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { EnergyReading } from '@/types';
 import { DollarSign } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
 interface CostCardProps {
   historicalData: EnergyReading[];
+  rate: number;
+  onRateChange: (rate: number) => void;
 }
 
-export function CostCard({ historicalData }: CostCardProps) {
-  const [rate, setRate] = useState<number>(0.15); // Tarifa por defecto, ej. $0.15/kWh
-
+export function CostCard({ historicalData, rate, onRateChange }: CostCardProps) {
   const { totalKWh, estimatedCost } = useMemo(() => {
     if (!historicalData || historicalData.length === 0) {
       return { totalKWh: 0, estimatedCost: 0 };
     }
 
-    // Si solo hay un punto de datos, no podemos calcular el intervalo de tiempo.
-    // Podríamos asumir un pequeño intervalo o simplemente devolver 0.
-    // Por simplicidad y para evitar cálculos erróneos, devolvemos 0 si hay menos de 2 puntos.
     if (historicalData.length < 2) {
-      // Opcional: podríamos estimar el consumo si solo hay un punto, pero sería una suposición.
-      // Por ahora, lo mantenemos simple.
-      return { totalKWh: 0, estimatedCost: 0 };
+      // Estimate based on a single point, assuming it ran for the refresh interval (e.g., 8 seconds)
+      const lastReading = historicalData[0];
+      const wattSeconds = lastReading.potencia_w * 8; // Assuming 8 seconds of consumption
+      const totalKWh = wattSeconds / 3600000;
+      const estimatedCost = totalKWh * rate;
+      return { totalKWh, estimatedCost };
     }
 
     let totalWattSeconds = 0;
@@ -42,15 +42,12 @@ export function CostCard({ historicalData }: CostCardProps) {
           new Date(prev.created_at).getTime()) /
         1000;
       
-      // Evitar división por cero o valores negativos si los timestamps son iguales o están desordenados
       if (timeDiffSeconds <= 0) continue;
 
-      // Usamos el promedio de potencia entre dos puntos para una mejor aproximación del consumo en ese intervalo
       const avgPower = (prev.potencia_w + curr.potencia_w) / 2;
       totalWattSeconds += avgPower * timeDiffSeconds;
     }
 
-    // 1 kWh = 1000 Wh = 3,600,000 Ws
     const totalKWh = totalWattSeconds / 3600000;
     const estimatedCost = totalKWh * rate;
 
@@ -60,7 +57,7 @@ export function CostCard({ historicalData }: CostCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Costo Estimado</CardTitle>
+        <CardTitle className="text-sm font-medium">Costo Acumulado</CardTitle>
         <DollarSign className="h-5 w-5 text-muted-foreground" />
       </CardHeader>
       <CardContent>
@@ -78,7 +75,7 @@ export function CostCard({ historicalData }: CostCardProps) {
             id="kwh-rate"
             type="number"
             value={rate}
-            onChange={(e) => setRate(parseFloat(e.target.value) || 0)}
+            onChange={(e) => onRateChange(parseFloat(e.target.value) || 0)}
             step="0.01"
             className="h-8"
           />

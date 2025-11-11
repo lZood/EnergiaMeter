@@ -8,11 +8,13 @@ import { DashboardHeader } from '@/components/dashboard/header';
 import { EnergyCard } from '@/components/dashboard/energy-card';
 import { HistoryChart } from '@/components/dashboard/history-chart';
 import { CostCard } from '@/components/dashboard/cost-card';
+import { ForecastCard } from '@/components/dashboard/forecast-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Timer } from '@/components/dashboard/timer';
 import { analyzeEnergyConsumption } from '@/ai/flows/analyze-energy-flow';
 import { detectAnomaly } from '@/ai/flows/detect-anomaly-flow';
+import { forecastEnergyCost } from '@/ai/flows/forecast-energy-flow';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -48,10 +50,14 @@ export default function ClientPage() {
   const { toast } = useToast();
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
   const [time, setTime] = useState('N/A');
+  const [rate, setRate] = useState<number>(0.15);
 
   const [isAnalysisDialogOpen, setAnalysisDialogOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  const [forecastedCost, setForecastedCost] = useState<number>(0);
+  const [isForecasting, setIsForecasting] = useState(false);
 
   const handleAnalysis = async () => {
     if (!historicalData || historicalData.length < 5) {
@@ -89,6 +95,19 @@ export default function ClientPage() {
       console.error("Error al detectar anomalías:", error);
     }
   }, [toast]);
+  
+  const getForecast = useCallback(async (data: EnergyReading[], currentRate: number) => {
+    if (data.length < 10) return;
+    setIsForecasting(true);
+    try {
+      const cost = await forecastEnergyCost(data, currentRate);
+      setForecastedCost(cost);
+    } catch (error) {
+      console.error("Error al obtener el pronóstico:", error);
+    } finally {
+      setIsForecasting(false);
+    }
+  }, []);
 
 
   const fetchData = useCallback(async () => {
@@ -114,10 +133,11 @@ export default function ClientPage() {
         setCurrentReading(latestReading);
         setTime(new Date(latestReading.created_at).toLocaleTimeString());
         checkForAnomalies(data);
+        getForecast(data, rate);
       }
     }
     if (loading) setLoading(false);
-  }, [isSupabaseConnected, toast, loading, checkForAnomalies]);
+  }, [isSupabaseConnected, toast, loading, checkForAnomalies, getForecast, rate]);
 
 
   useEffect(() => {
@@ -165,6 +185,7 @@ export default function ClientPage() {
       <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8">
         <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing}/>
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
@@ -222,14 +243,9 @@ export default function ClientPage() {
             unit="%"
             icon={Droplets}
           />
-          <EnergyCard
-            title="Última Actualización"
-            value={time}
-            unit=""
-            icon={Clock}
-          />
+          <CostCard historicalData={historicalData} rate={rate} onRateChange={setRate} />
           
-          <CostCard historicalData={historicalData} />
+          <ForecastCard cost={forecastedCost} isLoading={isForecasting} />
 
           <HistoryChart data={historicalData} />
         </div>
