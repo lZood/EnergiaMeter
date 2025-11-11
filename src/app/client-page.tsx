@@ -22,7 +22,6 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 
 const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
   { length: 20 },
@@ -63,7 +62,7 @@ export default function ClientPage() {
     setIsAnalyzing(true);
     setAnalysisDialogOpen(true);
     try {
-      const result = await analyzeEnergyConsumption(historicalData);
+      const result = await analyzeEnergyConsumption({ readingsJSON: JSON.stringify(historicalData) });
       setAnalysisResult(result);
     } catch (error) {
       console.error("Error al analizar el consumo:", error);
@@ -77,7 +76,7 @@ export default function ClientPage() {
     if (data.length < 10) return; // Need enough data to detect anomalies
 
     try {
-      const anomalyResult = await detectAnomaly(data);
+      const anomalyResult = await detectAnomaly({ readingsJSON: JSON.stringify(data) });
       if (anomalyResult.isAnomaly) {
         toast({
           variant: 'destructive',
@@ -266,3 +265,5 @@ export default function ClientPage() {
     </div>
   );
 }
+
+    
