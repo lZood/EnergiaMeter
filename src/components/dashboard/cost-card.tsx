@@ -12,7 +12,7 @@ interface CostCardProps {
 }
 
 export function CostCard({ historicalData }: CostCardProps) {
-  const [rate, setRate] = useState<number>(0.15); // Default rate, e.g., $0.15/kWh
+  const [rate, setRate] = useState<number>(0.15); // Tarifa por defecto, ej. $0.15/kWh
 
   const { totalKWh, estimatedCost } = useMemo(() => {
     if (historicalData.length < 2) {
@@ -32,7 +32,7 @@ export function CostCard({ historicalData }: CostCardProps) {
         (new Date(curr.created_at).getTime() -
           new Date(prev.created_at).getTime()) /
         1000;
-      const avgPower = (prev.power + curr.power) / 2;
+      const avgPower = (prev.potencia_w + curr.potencia_w) / 2;
       totalWattSeconds += avgPower * timeDiffSeconds;
     }
 
@@ -45,7 +45,7 @@ export function CostCard({ historicalData }: CostCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Estimated Cost</CardTitle>
+        <CardTitle className="text-sm font-medium">Costo Estimado</CardTitle>
         <DollarSign className="h-5 w-5 text-muted-foreground" />
       </CardHeader>
       <CardContent>
@@ -53,11 +53,11 @@ export function CostCard({ historicalData }: CostCardProps) {
           ${estimatedCost.toFixed(2)}
         </div>
         <p className="text-xs text-muted-foreground">
-          Based on {totalKWh.toFixed(3)} kWh consumed
+          Basado en {totalKWh.toFixed(3)} kWh consumidos
         </p>
         <div className="mt-4 space-y-2">
           <Label htmlFor="kwh-rate" className="text-xs">
-            Rate ($/kWh)
+            Tarifa ($/kWh)
           </Label>
           <Input
             id="kwh-rate"

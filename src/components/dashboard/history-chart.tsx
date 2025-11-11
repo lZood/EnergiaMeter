@@ -21,8 +21,8 @@ interface HistoryChartProps {
 }
 
 const chartConfig = {
-  power: {
-    label: 'Power (W)',
+  potencia_w: {
+    label: 'Potencia (W)',
     color: 'hsl(var(--accent))',
   },
 };
@@ -46,9 +46,9 @@ export function HistoryChart({ data }: HistoryChartProps) {
   return (
     <Card className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
       <CardHeader>
-        <CardTitle>Consumption History</CardTitle>
+        <CardTitle>Historial de Consumo</CardTitle>
         <CardDescription>
-          Energy consumption over the last fetched period.
+          Consumo de energía durante el último período obtenido.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -87,20 +87,20 @@ export function HistoryChart({ data }: HistoryChartProps) {
                 <linearGradient id="fillPower" x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="5%"
-                    stopColor="var(--color-power)"
+                    stopColor="var(--color-potencia_w)"
                     stopOpacity={0.8}
                   />
                   <stop
                     offset="95%"
-                    stopColor="var(--color-power)"
+                    stopColor="var(--color-potencia_w)"
                     stopOpacity={0.1}
                   />
                 </linearGradient>
               </defs>
               <Area
                 type="monotone"
-                dataKey="power"
-                stroke="var(--color-power)"
+                dataKey="potencia_w"
+                stroke="var(--color-potencia_w)"
                 fillOpacity={1}
                 fill="url(#fillPower)"
                 strokeWidth={2}
@@ -110,7 +110,7 @@ export function HistoryChart({ data }: HistoryChartProps) {
         ) : (
           <div className="flex h-[250px] w-full items-center justify-center rounded-md border border-dashed bg-muted/50">
             <p className="text-muted-foreground">
-              Waiting for more data to display chart...
+              Esperando más datos para mostrar el gráfico...
             </p>
           </div>
         )}

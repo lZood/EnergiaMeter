@@ -12,7 +12,7 @@ export function DashboardHeader() {
         </h1>
       </div>
       <p className="mt-2 text-muted-foreground">
-        Your real-time energy consumption dashboard.
+        Tu panel de control de consumo de energía en tiempo real.
       </p>
     </div>
   );
