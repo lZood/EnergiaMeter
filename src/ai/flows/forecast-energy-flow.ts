@@ -9,7 +9,7 @@ import { z } from 'genkit';
 import type { EnergyReading } from '@/types';
 
 const ForecastInputSchema = z.object({
-  readingsJSON: z.string().describe("Un string JSON de un array de lecturas de energía históricas."),
+  readingsJSON: z.string().describe("Un string JSON de un array de lecturas de energía históricas (solo potencia_w y created_at)."),
   rate: z.number().describe("La tarifa actual en costo por kWh."),
 });
 
@@ -25,13 +25,15 @@ const prompt = ai.definePrompt({
   output: { schema: ForecastOutputSchema },
   prompt: `Eres un analista de datos especializado en proyecciones de consumo energético. Tu tarea es analizar una serie de lecturas de energía y una tarifa por kWh para predecir el costo total al final de un período de 30 días.
 
-Datos de consumo histórico: {{{readingsJSON}}}
+Datos de consumo histórico (potencia en Watts): {{{readingsJSON}}}
 Tarifa por kWh: {{{rate}}}
 
-1. Calcula el consumo promedio de kWh basado en los datos proporcionados.
-2. Proyecta ese consumo promedio a lo largo de 30 días.
-3. Calcula el costo total estimado multiplicando los kWh proyectados por la tarifa.
-4. Devuelve el resultado únicamente en el formato JSON especificado.
+1.  Calcula el consumo total de energía en kWh a partir de los datos proporcionados. Para ello, integra la potencia (Watts) a lo largo del tiempo (segundos) y convierte el resultado de Watt-segundo a kWh (1 kWh = 3,600,000 Watt-segundos).
+2.  Calcula la duración total del período de muestreo en días.
+3.  Calcula el consumo promedio diario en kWh.
+4.  Proyecta ese consumo promedio a lo largo de un período de 30 días para obtener los kWh totales del mes.
+5.  Calcula el costo total estimado multiplicando los kWh proyectados por la tarifa.
+6.  Devuelve el resultado únicamente en el formato JSON especificado. No incluyas explicaciones adicionales.
 `,
 });
 
