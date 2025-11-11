@@ -8,7 +8,6 @@ import { ForecastCard } from '@/components/dashboard/forecast-card';
 import { forecastEnergyCost } from '@/ai/flows/forecast-energy-flow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { DashboardHeader } from '@/components/dashboard/header';
 
 const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
   { length: 20 },
@@ -23,8 +22,6 @@ const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
   })
 );
 
-const FORECAST_INTERVAL = 86400000; // 24 hours
-
 export default function CostsPage() {
   const [historicalData, setHistoricalData] = useState<EnergyReading[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,19 +33,31 @@ export default function CostsPage() {
   const [isForecasting, setIsForecasting] = useState(false);
   const [lastForecastUpdate, setLastForecastUpdate] = useState<string | null>(null);
 
-  const getForecast = useCallback(async (data: EnergyReading[]) => {
-    if (data.length < 10) return;
+  const getForecast = useCallback(async () => {
+    if (historicalData.length < 10) {
+        toast({
+            variant: 'destructive',
+            title: 'Datos insuficientes',
+            description: 'Se necesitan más lecturas para realizar un pronóstico preciso.',
+        });
+        return;
+    }
     setIsForecasting(true);
     try {
-      const cost = await forecastEnergyCost(data, rate);
+      const cost = await forecastEnergyCost(historicalData, rate);
       setForecastedCost(cost);
       setLastForecastUpdate(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
     } catch (error) {
       console.error("Error al obtener el pronóstico:", error);
+      toast({
+            variant: 'destructive',
+            title: 'Error de Pronóstico',
+            description: 'No se pudo calcular el pronóstico. Inténtalo de nuevo.',
+      });
     } finally {
       setIsForecasting(false);
     }
-  }, [rate]);
+  }, [historicalData, rate, toast]);
 
   useEffect(() => {
     const checkSupabaseConnection = () => {
@@ -86,16 +95,6 @@ export default function CostsPage() {
     fetchData();
   }, [toast]);
   
-  // Effect for forecast, runs independently
-  useEffect(() => {
-    if (historicalData.length > 0) {
-      getForecast(historicalData); // Initial forecast
-      
-      const intervalId = setInterval(() => getForecast(historicalData), FORECAST_INTERVAL);
-
-      return () => clearInterval(intervalId);
-    }
-  }, [historicalData, getForecast]);
 
   if (loading) {
     return (
@@ -115,7 +114,12 @@ export default function CostsPage() {
       <main className="w-full max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <CostCard historicalData={historicalData} rate={rate} onRateChange={setRate} />
-          <ForecastCard cost={forecastedCost} isLoading={isForecasting} lastUpdated={lastForecastUpdate}/>
+          <ForecastCard 
+            cost={forecastedCost} 
+            isLoading={isForecasting} 
+            lastUpdated={lastForecastUpdate}
+            onForecast={getForecast}
+          />
         </div>
       </main>
     </div>
