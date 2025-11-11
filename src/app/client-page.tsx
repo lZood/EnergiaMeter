@@ -62,7 +62,7 @@ export default function ClientPage() {
     setIsAnalyzing(true);
     setAnalysisDialogOpen(true);
     try {
-      const result = await analyzeEnergyConsumption({ readingsJSON: JSON.stringify(historicalData) });
+      const result = await analyzeEnergyConsumption(historicalData);
       setAnalysisResult(result);
     } catch (error) {
       console.error("Error al analizar el consumo:", error);
@@ -76,7 +76,7 @@ export default function ClientPage() {
     if (data.length < 10) return; // Need enough data to detect anomalies
 
     try {
-      const anomalyResult = await detectAnomaly({ readingsJSON: JSON.stringify(data) });
+      const anomalyResult = await detectAnomaly(data);
       if (anomalyResult.isAnomaly) {
         toast({
           variant: 'destructive',
