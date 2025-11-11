@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { EnergyReading } from '@/types';
-import { Zap, Clock, TrendingUp, Droplets, Thermometer, Gauge } from 'lucide-react';
+import { Zap, Clock, TrendingUp, Droplets, Thermometer, Gauge, Sparkles } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard/header';
 import { EnergyCard } from '@/components/dashboard/energy-card';
 import { HistoryChart } from '@/components/dashboard/history-chart';
@@ -11,6 +11,18 @@ import { CostCard } from '@/components/dashboard/cost-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Timer } from '@/components/dashboard/timer';
+import { analyzeEnergyConsumption } from '@/ai/flows/analyze-energy-flow';
+import { detectAnomaly } from '@/ai/flows/detect-anomaly-flow';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 const MOCK_HISTORICAL_DATA: EnergyReading[] = Array.from(
   { length: 20 },
@@ -38,6 +50,48 @@ export default function ClientPage() {
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
   const [time, setTime] = useState('N/A');
 
+  const [isAnalysisDialogOpen, setAnalysisDialogOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const handleAnalysis = async () => {
+    if (!historicalData || historicalData.length < 5) {
+      setAnalysisResult("No hay suficientes datos para realizar un análisis. Espera a que se recopilen más lecturas.");
+      setAnalysisDialogOpen(true);
+      return;
+    }
+    setIsAnalyzing(true);
+    setAnalysisDialogOpen(true);
+    try {
+      const result = await analyzeEnergyConsumption(historicalData);
+      setAnalysisResult(result);
+    } catch (error) {
+      console.error("Error al analizar el consumo:", error);
+      setAnalysisResult("Ha ocurrido un error al intentar analizar los datos. Por favor, inténtalo de nuevo.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const checkForAnomalies = useCallback(async (data: EnergyReading[]) => {
+    if (data.length < 10) return; // Need enough data to detect anomalies
+
+    try {
+      const anomalyResult = await detectAnomaly(data);
+      if (anomalyResult.isAnomaly) {
+        toast({
+          variant: 'destructive',
+          title: '¡Alerta de Anomalía!',
+          description: anomalyResult.reason,
+          duration: 9000,
+        });
+      }
+    } catch (error) {
+      console.error("Error al detectar anomalías:", error);
+    }
+  }, [toast]);
+
+
   const fetchData = useCallback(async () => {
     if (!isSupabaseConnected) return;
 
@@ -60,10 +114,11 @@ export default function ClientPage() {
         const latestReading = data[0];
         setCurrentReading(latestReading);
         setTime(new Date(latestReading.created_at).toLocaleTimeString());
+        checkForAnomalies(data);
       }
     }
     if (loading) setLoading(false);
-  }, [isSupabaseConnected, toast, loading]);
+  }, [isSupabaseConnected, toast, loading, checkForAnomalies]);
 
 
   useEffect(() => {
@@ -109,7 +164,7 @@ export default function ClientPage() {
   if (loading && isSupabaseConnected) {
     return (
       <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8">
-        <DashboardHeader />
+        <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing}/>
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
@@ -127,7 +182,7 @@ export default function ClientPage() {
   return (
     <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-8 relative">
        {isSupabaseConnected && <Timer duration={REFRESH_INTERVAL} onComplete={fetchData} />}
-      <DashboardHeader />
+      <DashboardHeader onAnalyzeClick={handleAnalysis} isAnalyzing={isAnalyzing} />
       <main className="w-full max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <EnergyCard
@@ -180,6 +235,32 @@ export default function ClientPage() {
           <HistoryChart data={historicalData} />
         </div>
       </main>
+
+      <AlertDialog open={isAnalysisDialogOpen} onOpenChange={setAnalysisDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Análisis Energético
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isAnalyzing ? (
+                <div className="space-y-4 pt-4">
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/6" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              ) : (
+                 <div className="whitespace-pre-wrap pt-4 text-sm text-foreground">{analysisResult}</div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cerrar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
